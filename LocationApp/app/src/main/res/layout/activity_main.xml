@@ -37,7 +37,9 @@
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="140dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="8dp"
         android:text="Please input server URL"
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/serverInput"
@@ -52,7 +54,7 @@
         android:layout_marginTop="16dp"
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="Server URL (example.com)"
+        android:text=""
         android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -60,16 +62,15 @@
 
     <ToggleButton
         android:id="@+id/locationButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="88dp"
+        android:layout_width="133dp"
+        android:layout_height="69dp"
+        android:layout_marginBottom="84dp"
         android:text="ToggleButton"
         android:textOff="OFF"
         android:textOn="ON"
         android:textSize="18sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
@@ -84,10 +85,11 @@
         app:layout_constraintTop_toBottomOf="@+id/serverInput" />
 
     <TextView
-        android:id="@+id/textURL"
+        android:id="@+id/displayURL"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="SERVER URL"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
         android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/locationButton"
         app:layout_constraintEnd_toEndOf="parent"
