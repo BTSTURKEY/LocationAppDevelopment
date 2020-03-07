@@ -62,23 +62,25 @@
 
     <ToggleButton
         android:id="@+id/locationButton"
-        android:layout_width="133dp"
-        android:layout_height="69dp"
-        android:layout_marginBottom="84dp"
+        android:layout_width="139dp"
+        android:layout_height="112dp"
+        android:layout_marginBottom="50dp"
         android:text="ToggleButton"
         android:textOff="OFF"
         android:textOn="ON"
         android:textSize="18sp"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/submitButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="126dp"
+        android:layout_height="54dp"
         android:layout_marginTop="16dp"
         android:text="Save URL"
+        android:textSize="18sp"
         app:layout_constraintBottom_toTopOf="@+id/consentSwitch"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
