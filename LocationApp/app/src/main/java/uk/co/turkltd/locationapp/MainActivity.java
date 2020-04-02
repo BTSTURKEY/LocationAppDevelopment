@@ -215,16 +215,14 @@ public class MainActivity extends AppCompatActivity {
     private final LocationListener receiveLocation = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
-            Log.v("method", "4");
             longitude = location.getLongitude();
             latitude = location.getLatitude();
-            Log.v("method", "5");
+
             String lat = Double.toString(latitude);
             String lon = Double.toString(longitude);
-            Log.v("method", "6");
+
             latitudeValue.setText(lat);
             longitudeValue.setText(lon);
-            Log.v("method", "7");
         }
 
         @Override
