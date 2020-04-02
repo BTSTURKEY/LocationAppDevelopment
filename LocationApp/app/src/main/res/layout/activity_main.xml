@@ -100,4 +100,23 @@
         app:layout_constraintTop_toBottomOf="@+id/consentSwitch"
         app:layout_constraintVertical_bias="0.453" />
 
+    <TextView
+        android:id="@+id/longitudeValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/locationButton"
+        app:layout_constraintEnd_toStartOf="@+id/latitudeValue"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/displayURL" />
+
+    <TextView
+        android:id="@+id/latitudeValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="140dp"
+        app:layout_constraintBottom_toTopOf="@+id/locationButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/displayURL"
+        app:layout_constraintVertical_bias="0.491" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
