@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">LocationApp</string>
+    <string name="locate_me">Locate Me</string>
+    <string name="give_consent">I give consent for this application to send my location data to the desired URL listed below</string>
+    <string name="server_input">Please input server URL</string>
+    <string name="save_url">Save URL</string>
+    <string name="hint">http://test.com</string>
+    <string name="togglebutton">ToggleButton</string>
+    <string name="off">OFF</string>
+    <string name="on">ON</string>
 </resources>

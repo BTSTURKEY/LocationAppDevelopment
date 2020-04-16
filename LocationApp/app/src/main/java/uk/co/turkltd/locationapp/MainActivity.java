@@ -2,7 +2,6 @@ package uk.co.turkltd.locationapp;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.security.crypto.MasterKeys;
 import androidx.security.crypto.EncryptedSharedPreferences;
 
@@ -13,12 +12,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.Criteria;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -27,6 +23,13 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
@@ -34,20 +37,23 @@ public class MainActivity extends AppCompatActivity {
     //Objects
     EncryptedSharedPreferences sharedPreferences;
     SharedPreferences.Editor editor;
+    FusedLocationProviderClient fusedLocationProviderClient;
     LocationManager locationManager;
+    LocationRequest locationRequest;
+    LocationCallback locationCallback;
 
     //Variables
     String masterKeyAlias, serverURL, savedURL;
-    boolean switchState, buttonState;
-    double longitude, latitude;
+    boolean switchState, buttonState, locationPermission;
+    long timeStamp;
+    double latitude, longitude;
 
     //Widgets
     EditText serverInput;
-    TextView displayURL, longitudeValue, latitudeValue;
+    TextView displayURL, currentValue, updatedValue;
     Button submitButton;
     ToggleButton locationButton;
     Switch consentSwitch;
-
 
     public MainActivity() {
         try {
@@ -62,7 +68,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         try {
-            //Encrypt data being sent to shared preferences, located in data/data/uk.co.turkltd.locationapp/shared_prefs/serverURL.xml
+            //Encrypt data being sent to shared preferences located in
+            // data/data/uk.co.turkltd.locationapp/shared_prefs/serverURL.xml
             sharedPreferences = (EncryptedSharedPreferences) EncryptedSharedPreferences.create(
                     "serverURL",
                     masterKeyAlias,
@@ -71,12 +78,13 @@ public class MainActivity extends AppCompatActivity {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
 
-
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
         }
 
+        //Initialise objects
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         editor = sharedPreferences.edit();
         editor.apply();
 
@@ -84,13 +92,16 @@ public class MainActivity extends AppCompatActivity {
         submitButton = findViewById(R.id.submitButton);
         serverInput = findViewById(R.id.serverInput);
         consentSwitch = findViewById(R.id.consentSwitch);
-        longitudeValue = findViewById(R.id.longitudeValue);
-        latitudeValue = findViewById(R.id.latitudeValue);
+        currentValue = findViewById(R.id.currentValue);
+        updatedValue = findViewById(R.id.updatedValue);
         locationButton = findViewById(R.id.locationButton);
 
+
+        //Checks which states the button and switches much be in
         checkStates();
 
-        //Submit button to save server URL to shared preferences as well as display result in displayURL
+        //Submit button to save server URL to shared preferences as well as display result in
+        // displayURL
         submitButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -115,14 +126,30 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    sendLocation();
+                    sendCurrentLocation();
+                    sendLocationUpdates();
                 } else {
-                    noSendLocation();
+                    stopLocation();
                 }
             }
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (locationPermission){
+            sendLocationUpdates();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (locationPermission){
+            sendLocationUpdates();
+        }
+    }
 
     public void checkStates() {
         //Set displayURL to what is saved in shared preferences
@@ -145,17 +172,17 @@ public class MainActivity extends AppCompatActivity {
         serverURL = serverInput.getText().toString();
         editor.putString("URL", serverURL);
         editor.apply();
-        savedURL = sharedPreferences.getString("URL", "");
         displayURL = findViewById(R.id.displayURL);
-        displayURL.setText(savedURL);
+        displayURL.setText(serverURL);
     }
 
     public void alertUser() {
         new AlertDialog.Builder(this)
                 .setTitle("Location settings")
-                .setMessage("Location services are deactivated, please enable them to use the application")
-                .setPositiveButton("Location settings", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
+                .setMessage("Location services are deactivated, please enable them to use the " +
+                        "application")
+                .setPositiveButton("Location settings", new DialogInterface.OnClickListener(){
+                    public void onClick(DialogInterface dialog, int which){
                         Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                         dialog.dismiss();
                         startActivity(i);
@@ -171,12 +198,21 @@ public class MainActivity extends AppCompatActivity {
         if (!gps || !network) {
             alertUser();
             consentSwitch.setChecked(false);
-        } else if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 101);
-            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+        }
+        else if (ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION},1000);
             consentSwitch.setChecked(false);
-        } else {
+        }
+        else {
             locationButton.setVisibility(View.VISIBLE);
             editor.putBoolean("SWITCH", true);
             editor.apply();
@@ -191,57 +227,55 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
-    private void sendLocation() {
-        Log.v("method", "1");
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setAltitudeRequired(false);
-        criteria.setBearingRequired(false);
-        criteria.setCostAllowed(true);
-        criteria.setPowerRequirement(Criteria.POWER_LOW);
-        String provider = locationManager.getBestProvider(criteria, true);
-        Log.v("method", "2");
-        if (provider != null) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                locationManager.requestLocationUpdates(provider, 0, 0, receiveLocation);
-                editor.putBoolean("BUTTON", true);
-                editor.apply();
-                Log.v("method", "3");
-            }
-        }
+    private void sendCurrentLocation(){
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            longitude = location.getLongitude();
+                            latitude = location.getLatitude();
+                            timeStamp = location.getTime();
+                            currentValue.setText(String.format(String.valueOf(longitude), latitude));
+                            locationPermission = true;
+                            editor.putBoolean("BUTTON", true);
+                            editor.apply();
+                        }
+                        else {
+                            locationButton.setChecked(false);
+                            alertUser();
+                        }
+                    }
+                });
     }
 
-    private final LocationListener receiveLocation = new LocationListener() {
-        @Override
-        public void onLocationChanged(Location location) {
-            longitude = location.getLongitude();
-            latitude = location.getLatitude();
+    private void sendLocationUpdates() {
+        locationRequest = LocationRequest.create();
+        locationRequest.setInterval(5000);
+        locationRequest.setFastestInterval(2000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
 
-            String lat = Double.toString(latitude);
-            String lon = Double.toString(longitude);
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    if (location != null) {
+                        latitude = location.getLatitude();
+                        longitude = location.getLongitude();
+                        timeStamp = location.getTime();
+                        updatedValue.setText(String.format(String.valueOf(longitude), latitude));
+                    }
+                }
+            }
+        };
+    }
 
-            latitudeValue.setText(lat);
-            longitudeValue.setText(lon);
-        }
-
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {
-
-        }
-
-        @Override
-        public void onProviderEnabled(String provider) {
-
-        }
-
-        @Override
-        public void onProviderDisabled(String provider) {
-
-        }
-    };
-
-    private void noSendLocation() {
+    private void stopLocation() {
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+        locationPermission = false;
         editor.putBoolean("BUTTON", false);
         editor.apply();
     }
