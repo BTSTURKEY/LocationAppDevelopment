@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -15,6 +16,11 @@
         android:theme="@style/AppTheme"
         android:allowBackup="true"
         android:fullBackupContent="true">
+        <service
+            android:name=".LocationService"
+            android:enabled="true"
+            android:exported="false" />
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -22,4 +28,5 @@
             </intent-filter>
         </activity>
     </application>
+
 </manifest>
