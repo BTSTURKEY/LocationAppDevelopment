@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     ToggleButton locationButton;
     Switch consentSwitch;
 
+    //creates the encryption key for encrypted shared preferences
     public MainActivity() {
         try {
             masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
@@ -93,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
-
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
         }
@@ -101,7 +101,6 @@ public class MainActivity extends AppCompatActivity {
         //Initialise objects
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(10 * 1000); // 10 seconds
@@ -155,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     public void checkStates() {
         //Set displayURL to what is saved in shared preferences
         savedURL = sharedPreferences.getString("URL", "");
@@ -162,7 +162,8 @@ public class MainActivity extends AppCompatActivity {
         //Check state of switch from shared preferences and apply required settings.
         switchState = sharedPreferences.getBoolean("SWITCH", false);
         consentSwitch.setChecked(switchState);
-        if (switchState = true) {
+        if (switchState) {
+            consentOn();
             locationButton.setVisibility(View.VISIBLE);
         }
         //Check state of toggle button from shared preferences and apply required settings.
@@ -173,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //saves the inputted URL into shared preferences and displays it
     public void saveURL() {
         savedURL = serverInput.getText().toString();
         editor.putString("URL", savedURL);
@@ -180,6 +182,7 @@ public class MainActivity extends AppCompatActivity {
         displayURL.setText(savedURL);
     }
 
+    //alert the user that location permissions are off
     public void alertUser() {
         new AlertDialog.Builder(this)
                 .setTitle("Location settings")
@@ -194,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    //checks if both GPS and Network are enabled for the FusedLocationProvider
     @RequiresApi(api = Build.VERSION_CODES.Q)
     public void consentOn() {
         gps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -220,16 +224,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //turn location off and make sure buttons display this
     public void consentOff() {
+        if(locationCallback != null){
+            stopLocation();
+        }
         consentSwitch.setChecked(false);
         locationButton.setVisibility(View.INVISIBLE);
-        locationButton.setChecked(false);
         editor.putBoolean("SWITCH", false);
-        editor.putBoolean("BUTTON", false);
         editor.apply();
-        stopLocation();
     }
 
+    //record location data and input it into strings along with a timestamp
     private void sendLocation() {
         locationCallback = new LocationCallback() {
             @Override
@@ -257,22 +263,25 @@ public class MainActivity extends AppCompatActivity {
         startService();
     }
 
+    //stop the location from being sent
     private void stopLocation() {
+        if (stringRequest != null){
+            cancelPostRequest();
+            stopService();
+        }
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         locationButton.setChecked(false);
         editor.putBoolean("BUTTON", false);
         editor.apply();
-        cancelPostRequest();
-        stopService();
     }
 
+    //sends the location data as a post request to the URL provided by the user
     private void sendPostRequest() {
         queue = Volley.newRequestQueue(this);
         savedURL = sharedPreferences.getString("URL", "");
         stringRequest = new StringRequest(Request.Method.POST, savedURL,
                 response -> Log.e("HttpClient", "success! response: " + response),
                 error -> Log.e("HttpClient", "error: " + error.toString())) {
-
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
@@ -282,7 +291,6 @@ public class MainActivity extends AppCompatActivity {
                 params.put("time_stamp", timeStampString);
                 return params;
             }
-
             @Override
             public Map<String, String> getHeaders() {
                 Map<String, String> params = new HashMap<>();
@@ -293,16 +301,19 @@ public class MainActivity extends AppCompatActivity {
         queue.add(stringRequest);
     }
 
+    //cancel the post request
     private void cancelPostRequest() {
         stringRequest.cancel();
     }
 
+    //start the location service so the app can work in the background
     private void startService() {
         Intent serviceIntent = new Intent(this, LocationService.class);
         serviceIntent.putExtra("inputExtra", "Location Service");
         ContextCompat.startForegroundService(this, serviceIntent);
     }
 
+    //stop teh location service
     private void stopService() {
         Intent serviceIntent = new Intent(this, LocationService.class);
         stopService(serviceIntent);

@@ -13,12 +13,14 @@ import androidx.core.app.NotificationCompat;
 
 public class LocationService extends Service {
 
+    //Objects
     Intent nIntent;
     PendingIntent pendingIntent;
     Notification notification;
     NotificationChannel notificationChannel;
     NotificationManager notificationManager;
 
+    //Variables
     String channel_ID = "Location Service Channel";
     String input = "";
 
@@ -27,16 +29,14 @@ public class LocationService extends Service {
         super.onCreate();
     }
 
+    //Create a notification channel to run allowing the application to be run in the background
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         input = intent.getStringExtra("inputExtra");
-
         createNotificationChannel();
-
         nIntent = new Intent(this, MainActivity.class);
         pendingIntent = PendingIntent.getActivity(this,
                 0, nIntent, 0);
-
         notification = new NotificationCompat.Builder(this, channel_ID)
                 .setContentTitle("Location Service")
                 .setContentText(input)
@@ -59,7 +59,6 @@ public class LocationService extends Service {
                 "Location Service Channel",
                 NotificationManager.IMPORTANCE_DEFAULT
         );
-
         notificationManager = getSystemService(NotificationManager.class);
         assert notificationManager != null;
         notificationManager.createNotificationChannel(notificationChannel);
